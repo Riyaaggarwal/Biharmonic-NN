@@ -21,7 +21,7 @@ surface = np.zeros((ny, nx))
 
 for i, x in enumerate(x_space):
     for j, y in enumerate(y_space):
-        surface[i][j] = analytic_solution([x, y])
+        ex_surface[i][j] = analytic_solution([x, y])
 
 def f(x):
     return 24.*(x[0]**4.+x[1]**4.) - 144.*(x[0]**2.+x[1]**2.) + 288.*(x[0]**2.)*(x[1]**2.) + 80.
