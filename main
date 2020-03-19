@@ -1,0 +1,136 @@
+import autograd.numpy as np
+from autograd import grad, jacobian, hessian, elementwise_grad
+import autograd.numpy.random as npr
+
+from matplotlib import pyplot as plt
+from matplotlib import pyplot, cm
+from mpl_toolkits.mplot3d import Axes3D 
+nx = 30
+ny = 30
+
+dx = 1. / nx
+dy = 1. / ny
+
+x_space = np.linspace(0., 1., nx)
+y_space = np.linspace(0., 1., ny)
+
+def analytic_solution(x):
+    return (x[0]**2-1)**2 * (x[1]**2-1)**2
+    
+surface = np.zeros((ny, nx))
+
+for i, x in enumerate(x_space):
+    for j, y in enumerate(y_space):
+        surface[i][j] = analytic_solution([x, y])
+
+def f(x):
+    return 24.*(x[0]**4.+x[1]**4.) - 144.*(x[0]**2.+x[1]**2.) + 288.*(x[0]**2.)*(x[1]**2.) + 80.
+  
+def sigmoid(x):
+    return (1. / (1. + np.exp(-x)))
+
+def neural_network(W, x):
+    a1 = sigmoid(np.dot(x, W[0]))
+    return np.dot(a1, W[1])
+
+def neural_network_x(x):
+    a1 = sigmoid(np.dot(x, W[0]))
+    return np.dot(a1, W[1])
+
+#First term in trial function
+def A(x):
+    return (1/(64*np.pi**3))*np.sin(2*np.pi*x[0])*np.sin(2*np.pi*x[1])
+    #return 0.
+
+#Trial Function
+def psy_trial(x, net_out):
+    return A(x) + ((x[0])**2) * ((x[0]-1)**2) * ((x[1])**2) * ((x[1]-1)**2) * net_out
+    
+   def loss_function(W, x, y):
+    loss_sum = 0.
+    
+    for xi in x:
+        for yi in y:
+            
+            input_point = np.array([xi, yi])
+            
+            net_out = neural_network(W, input_point)[0]
+
+            net_out_jacobian = jacobian(neural_network_x)(input_point)
+            net_out_hessian = jacobian(jacobian(neural_network_x))(input_point)
+            
+            psy_t = psy_trial(input_point, net_out)
+            psy_t_jacobian = jacobian(psy_trial)(input_point, net_out)
+            psy_t_hessian = hessian(psy_trial)(input_point, net_out)
+            psy_t_hessian4 = hessian(hessian(psy_trial))(input_point, net_out)
+            
+            gradient_of_trial_d2x = psy_t_hessian4[0][0]
+            gradient_of_trial_d2y = psy_t_hessian4[1][1]
+            gradient_of_trial_d2xy = psy_t_hessian4[0][1]
+            
+            gradient_of_trial_d4x = gradient_of_trial_d2x[0][0]
+            gradient_of_trial_d4y = gradient_of_trial_d2y[1][1]
+            gradient_of_trial_d4xy = gradient_of_trial_d2xy[0][1]
+
+            func = f(input_point) # right part function
+            #error function 
+            err_sqr = ((gradient_of_trial_d4x + gradient_of_trial_d4xy + gradient_of_trial_d4y) - func)**2
+            loss_sum += err_sqr
+        
+    return loss_sum
+    
+    W = [npr.randn(2, 10), npr.randn(10, 1)]
+    lmb = 0.0001
+
+    for i in range(10):
+    print(" iteration "+str(i))
+    print((loss_function)(W, x_space, y_space))
+    loss_grad =  grad(loss_function)(W, x_space, y_space)
+
+    W[0] = W[0] - lmb * loss_grad[0]
+    W[1] = W[1] - lmb * loss_grad[1]
+    print("Loss function Value is :")
+    print (loss_function(W, x_space, y_space))
+    print(W)
+    
+    nn_surface = np.zeros((ny, nx))
+    ex_surface  = np.zeros((ny, nx))
+
+    for i, x in enumerate(x_space):
+    for j, y in enumerate(y_space):
+        ex_surface[i][j] = analytic_solution([x, y])
+        net_outt = neural_network(W, [x, y])[0]
+        nn_surface[i][j] = psy_trial([x, y], net_outt)
+
+print("Analytic Solution Value")
+print (ex_surface[2])
+print("Numerical solution with neural network")
+print (nn_surface2[2])
+          
+fig2 = plt.figure(1)
+ax   = fig2.gca(projection='3d')
+X, Y = np.meshgrid(x_space, y_space)
+surf = ax.plot_surface(X, Y, ex_surface, rstride=1, cstride=1, cmap=cm.viridis,
+        linewidth=0, antialiased=False)
+plt.show()
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1)
+ax.set_zlim(0, 3)
+
+ax.set_xlabel('$x$')
+ax.set_ylabel('$y$');
+
+fig3 = plt.figure(2)
+ax   = fig3.gca(projection='3d')
+X, Y = np.meshgrid(x_space, y_space)
+surf = ax.plot_surface(X, Y, nn_surface, rstride=1, cstride=1, cmap=cm.viridis,
+        linewidth=0, antialiased=False)
+plt.show()
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1)
+ax.set_zlim(0, 3)
+
+ax.set_xlabel('$x$')
+ax.set_ylabel('$y$');
+
+
